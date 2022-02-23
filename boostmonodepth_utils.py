@@ -5,10 +5,11 @@ import numpy as np
 import imageio
 from MiDaS.MiDaS_utils import write_depth
 
-BOOST_BASE = 'BoostingMonocularDepth'
-
+dir_path = os.path.dirname(os.path.realpath(__file__))
+BOOST_BASE = os.path.join(dir_path, 'BoostingMonocularDepth')
 BOOST_INPUTS = 'inputs'
 BOOST_OUTPUTS = 'outputs'
+
 
 def run_boostmonodepth(img_names, src_folder, depth_folder):
 
@@ -18,7 +19,7 @@ def run_boostmonodepth(img_names, src_folder, depth_folder):
     # remove irrelevant files first
     clean_folder(os.path.join(BOOST_BASE, BOOST_INPUTS))
     clean_folder(os.path.join(BOOST_BASE, BOOST_OUTPUTS))
-
+    
     tgt_names = []
     for img_name in img_names:
         base_name = os.path.basename(img_name)
@@ -37,7 +38,7 @@ def run_boostmonodepth(img_names, src_folder, depth_folder):
         scale = 640. / max(H, W)
 
         # resize and save depth
-        target_height, target_width = int(round(H * scale)), int(round(W * scale))
+        target_height, target_width = int(round(H * scale)), int(round(W * scale))        
         depth = imageio.imread(os.path.join(BOOST_BASE, BOOST_OUTPUTS, tgt_name))
         depth = np.array(depth).astype(np.float32)
         depth = resize_depth(depth, target_width, target_height)

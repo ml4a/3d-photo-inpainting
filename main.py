@@ -13,6 +13,7 @@ from mesh import write_ply, read_ply, output_3d_photo
 from utils import get_MiDaS_samples, read_MiDaS_depth
 import torch
 import cv2
+import PIL
 from skimage.transform import resize
 import imageio
 import copy
@@ -23,15 +24,45 @@ from MiDaS.monodepth_net import MonoDepthNet
 import MiDaS.MiDaS_utils as MiDaS_utils
 from bilateral_filtering import sparse_bilateral_filtering
 
+dir_path = os.path.dirname(os.path.realpath(__file__))
+
+
 parser = argparse.ArgumentParser()
-parser.add_argument('--config', type=str, default='argument.yml',help='Configure of post processing')
+parser.add_argument('--config', type=str, default=os.path.join(dir_path, 'argument.yml'), help='Configure of post processing')
+parser.add_argument('--size', type=int, default=960, help='size of longest dimension')
+parser.add_argument('--num_frames', type=int, default=2)
+parser.add_argument('--x_shift', type=float, default=0)
+parser.add_argument('--y_shift', type=float, default=0)
+parser.add_argument('--z_shift', type=float, default=0)
+parser.add_argument('--input', required=True, type=str, help="Input file")
+parser.add_argument('--output', type=str, required=True, help="Output file")
+
 args = parser.parse_args()
-config = yaml.load(open(args.config, 'r'))
+
+config = yaml.load(open(os.path.join(dir_path, args.config), 'r'))
 if config['offscreen_rendering'] is True:
     vispy.use(app='egl')
-os.makedirs(config['mesh_folder'], exist_ok=True)
-os.makedirs(config['video_folder'], exist_ok=True)
-os.makedirs(config['depth_folder'], exist_ok=True)
+
+filename, ext = os.path.basename(args.input).split('.')
+
+config['src_folder'] = os.path.dirname(args.input)
+config['specific'] = filename
+config['img_format'] = '.%s'%ext
+config['mesh_folder'] = os.path.join(dir_path, config['mesh_folder'])
+config['video_folder'] = os.path.join(dir_path, config['video_folder'])
+config['depth_folder'] = os.path.join(dir_path, config['depth_folder'])
+config['depth_edge_model_ckpt'] = os.path.join(dir_path, config['depth_edge_model_ckpt'])
+config['depth_feat_model_ckpt'] = os.path.join(dir_path, config['depth_feat_model_ckpt'])
+config['rgb_feat_model_ckpt'] = os.path.join(dir_path, config['rgb_feat_model_ckpt'])
+config['traj_types'] = ['double-straight-line']
+config['video_postfix'] = ['zoom-in']
+config['longer_side_len'] = args.size
+config['num_frames'] = 2
+config['save_ply'] = False
+config['x_shift_range'] = [args.x_shift]
+config['y_shift_range'] = [args.y_shift]
+config['z_shift_range'] = [args.z_shift]
+
 sample_list = get_MiDaS_samples(config['src_folder'], config['depth_folder'], config, config['specific'])
 normal_canvas, all_canvas = None, None
 
@@ -42,6 +73,7 @@ else:
 
 print(f"running on device {device}")
 
+
 for idx in tqdm(range(len(sample_list))):
     depth = None
     sample = sample_list[idx]
@@ -50,6 +82,7 @@ for idx in tqdm(range(len(sample_list))):
     image = imageio.imread(sample['ref_img_fi'])
 
     print(f"Running depth extraction at {time.time()}")
+    
     if config['use_boostmonodepth'] is True:
         run_boostmonodepth(sample['ref_img_fi'], config['src_folder'], config['depth_folder'])
     elif config['require_midas'] is True:
@@ -127,15 +160,17 @@ for idx in tqdm(range(len(sample_list))):
     else:
         verts, colors, faces, Height, Width, hFov, vFov = rt_info
 
-
-    print(f"Making video at {time.time()}")
+    #print(f"Making video at {time.time()}")
     videos_poses, video_basename = copy.deepcopy(sample['tgts_poses']), sample['tgt_name']
     top = (config.get('original_h') // 2 - sample['int_mtx'][1, 2] * config['output_h'])
     left = (config.get('original_w') // 2 - sample['int_mtx'][0, 2] * config['output_w'])
     down, right = top + config['output_h'], left + config['output_w']
     border = [int(xx) for xx in [top, down, left, right]]
-    normal_canvas, all_canvas = output_3d_photo(verts.copy(), colors.copy(), faces.copy(), copy.deepcopy(Height), copy.deepcopy(Width), copy.deepcopy(hFov), copy.deepcopy(vFov),
+    normal_canvas, all_canvas, results = output_3d_photo(verts.copy(), colors.copy(), faces.copy(), copy.deepcopy(Height), copy.deepcopy(Width), copy.deepcopy(hFov), copy.deepcopy(vFov),
                         copy.deepcopy(sample['tgt_pose']), sample['video_postfix'], copy.deepcopy(sample['ref_pose']), copy.deepcopy(config['video_folder']),
                         image.copy(), copy.deepcopy(sample['int_mtx']), config, image,
                         videos_poses, video_basename, config.get('original_h'), config.get('original_w'), border=border, depth=depth, normal_canvas=normal_canvas, all_canvas=all_canvas,
                         mean_loc_depth=mean_loc_depth)
+    
+    result = results[0]
+    PIL.Image.fromarray(result).save(args.output)

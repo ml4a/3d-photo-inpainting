@@ -1,4 +1,5 @@
 import os
+import PIL
 import numpy as np
 try:
     import cynetworkx as netx
@@ -2166,8 +2167,9 @@ class Canvas_view():
 
 def output_3d_photo(verts, colors, faces, Height, Width, hFov, vFov, tgt_poses, video_traj_types, ref_pose,
                     output_dir, ref_image, int_mtx, config, image, videos_poses, video_basename, original_H=None, original_W=None,
-                    border=None, depth=None, normal_canvas=None, all_canvas=None, mean_loc_depth=None):
+                    border=None, depth=None, normal_canvas=None, all_canvas=None, mean_loc_depth=None, save_video=True):
 
+    results = []
     cam_mesh = netx.Graph()
     cam_mesh.graph['H'] = Height
     cam_mesh.graph['W'] = Width
@@ -2286,11 +2288,11 @@ def output_3d_photo(verts, colors, faces, Height, Width, hFov, vFov, tgt_poses, 
         for stereo in stereos:
             crop_stereos.append((stereo[atop:abuttom, aleft:aright, :3] * 1).astype(np.uint8))
             stereos = crop_stereos
-        clip = ImageSequenceClip(stereos, fps=config['fps'])
-        if isinstance(video_basename, list):
-            video_basename = video_basename[0]
-        clip.write_videofile(os.path.join(output_dir, video_basename + '_' + video_traj_type + '.mp4'), fps=config['fps'])
+        if save_video:
+            clip = ImageSequenceClip(stereos, fps=config['fps'])
+            if isinstance(video_basename, list):
+                video_basename = video_basename[0]
+            clip.write_videofile(os.path.join(output_dir, video_basename + '_' + video_traj_type + '.mp4'), fps=config['fps'])
+        results.append(stereos[-1])
 
-
-
-    return normal_canvas, all_canvas
+    return normal_canvas, all_canvas, results
