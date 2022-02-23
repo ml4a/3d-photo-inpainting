@@ -1,3 +1,24 @@
+# Cheatsheet
+
+### Install
+
+```
+conda create --name 3DP python=3.7 anaconda
+conda activate 3DP 
+conda install pytorch==1.7.0 torchvision==0.8.0 torchaudio==0.7.0 cudatoolkit=11.0 -c pytorch
+pip install -r requirements.txt --no-deps
+pip install pyyaml==5.3.1
+./download.sh
+```
+
+### Run
+
+```
+conda run -n 3DP python main.py --x_shift 0.002 --y_shift -0.002 --z_shift 0.002 --input myInput.png --output myOutput.png
+```
+
+-----
+
 # [CVPR 2020] 3D Photography using Context-aware Layered Depth Inpainting
 
 [![Open 3DPhotoInpainting in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1706ToQrkIZshRSJSHvZ1RuCiM__YX3Bz)
