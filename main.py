@@ -170,7 +170,7 @@ for idx in tqdm(range(len(sample_list))):
                         copy.deepcopy(sample['tgt_pose']), sample['video_postfix'], copy.deepcopy(sample['ref_pose']), copy.deepcopy(config['video_folder']),
                         image.copy(), copy.deepcopy(sample['int_mtx']), config, image,
                         videos_poses, video_basename, config.get('original_h'), config.get('original_w'), border=border, depth=depth, normal_canvas=normal_canvas, all_canvas=all_canvas,
-                        mean_loc_depth=mean_loc_depth)
+                        mean_loc_depth=mean_loc_depth, save_video=False)
     
     result = results[0]
     PIL.Image.fromarray(result).save(args.output)
